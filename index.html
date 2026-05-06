@@ -471,13 +471,49 @@ label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-wei
   <div class="pw-box">
     <div class="pw-logo">TRAINFLOW</div>
     <div class="pw-sub">Panel de entrenador</div>
-    <input type="password" id="pw-input" placeholder="Contraseña" autocomplete="current-password">
-    <div id="pw-error" class="pw-error hidden">Contraseña incorrecta</div>
-    <button class="btn btn-accent" style="width:100%;margin-top:8px" onclick="checkPw()">Entrar como admin</button>
-    <div class="pw-divider">o</div>
-    <button class="btn btn-ghost" style="width:100%" onclick="goClient()">Ver como cliente →</button>
+    <!-- Línea 474 -->
+<input type="email" id="user-email" placeholder="Correo o Usuario" style="margin-bottom: 8px;">
+<input type="password" id="pw-input" placeholder="Contraseña" autocomplete="current-password">
+
+<div id="pw-error" class="pw-error hidden">Credenciales incorrectas</div>
+
+<!-- Botón Admin (Línea 477) -->
+<button class="btn btn-accent" style="width:100%; margin-top:8px" onclick="validarEntrada('admin')">Entrar como admin</button>
+
+<div class="pw-divider">o</div>
+
+<!-- Botón Cliente (Línea 479) -->
+<button class="btn btn-ghost" style="width:100%" onclick="validarEntrada('cliente')">Ver como cliente</button>
+
   </div>
 </div>
+  <script>
+function validarEntrada(tipoUsuario) {
+    const email = document.getElementById('user-email').value;
+    const password = document.getElementById('pw-input').value;
+    const errorDiv = document.getElementById('pw-error');
+
+    // 1. Intentamos entrar con Firebase
+    firebase.auth().signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            // 2. Si las credenciales son correctas, chequeamos el tipo
+            if (tipoUsuario === 'admin') {
+                console.log("Accediendo como Administrador...");
+                // Aquí podrías poner una función específica para admin si la tienes
+                goClient(); 
+            } else {
+                console.log("Accediendo como Cliente...");
+                goClient();
+            }
+        })
+        .catch((error) => {
+            // 3. Si hay error en Firebase, mostramos el mensaje rojo
+            errorDiv.classList.remove('hidden');
+            console.error("Error de login:", error.message);
+        });
+}
+</script>
+
 
 <!-- ══════════════════ ADMIN ══════════════════════ -->
 <div id="admin-screen" class="hidden">
