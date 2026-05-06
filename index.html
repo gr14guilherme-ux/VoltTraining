@@ -473,47 +473,15 @@ label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-wei
     <div class="pw-sub">Panel de entrenador</div>
     <!-- Línea 474 -->
 <input type="email" id="user-email" placeholder="Correo o Usuario" style="margin-bottom: 8px;">
+<input type="email" id="email-input" placeholder="Correo electrónico" style="width:100%; margin-bottom:10px;">
 <input type="password" id="pw-input" placeholder="Contraseña" autocomplete="current-password">
 
 <div id="pw-error" class="pw-error hidden">Credenciales incorrectas</div>
 
-<!-- Botón Admin (Línea 477) -->
-<button class="btn btn-accent" style="width:100%; margin-top:8px" onclick="validarEntrada('admin')">Entrar como admin</button>
-
-<div class="pw-divider">o</div>
-
-<!-- Botón Cliente (Línea 479) -->
-<button class="btn btn-ghost" style="width:100%" onclick="validarEntrada('cliente')">Ver como cliente</button>
+<button class="btn btn-accent" style="width:100%; margin-top:8px;" onclick="ejecutarLogin()">Entrar</button>
 
   </div>
 </div>
-  <script>
-function validarEntrada(tipoUsuario) {
-    const email = document.getElementById('user-email').value;
-    const password = document.getElementById('pw-input').value;
-    const errorDiv = document.getElementById('pw-error');
-
-    // 1. Intentamos entrar con Firebase
-    firebase.auth().signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            // 2. Si las credenciales son correctas, chequeamos el tipo
-            if (tipoUsuario === 'admin') {
-                console.log("Accediendo como Administrador...");
-                // Aquí podrías poner una función específica para admin si la tienes
-                goClient(); 
-            } else {
-                console.log("Accediendo como Cliente...");
-                goClient();
-            }
-        })
-        .catch((error) => {
-            // 3. Si hay error en Firebase, mostramos el mensaje rojo
-            errorDiv.classList.remove('hidden');
-            console.error("Error de login:", error.message);
-        });
-}
-</script>
-
 
 <!-- ══════════════════ ADMIN ══════════════════════ -->
 <div id="admin-screen" class="hidden">
@@ -680,16 +648,42 @@ function show(id) {
 }
 window.show = show;
 
-window.checkPw = function() {
-  const val = document.getElementById('pw-input').value;
-  if (val === ADMIN_PASSWORD) {
-    isAdmin = true;
-    show('admin-screen');
-    renderAdmin();
-  } else {
-    document.getElementById('pw-error').classList.remove('hidden');
-    document.getElementById('pw-input').style.borderColor = 'var(--red)';
-  }
+window.ejecutarLogin = async function() {
+    const email = document.getElementById("email-input").value;
+    const password = document.getElementById("pw-input").value;
+    const errorMsg = document.getElementById("pw-error");
+    const pwInput = document.getElementById("pw-input");
+
+    try {
+        // 1. Intentar entrar con Firebase
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // 2. Traer los datos del usuario desde Firestore
+        const docRef = doc(db, "usuarios", user.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const datos = docSnap.data();
+
+            if (datos.rol === "admin") {
+                show('admin-screen');
+            } else {
+                // Cargamos su rutina y nombre antes de mostrar la pantalla
+                document.getElementById("c-content").innerText = datos.rutina || "Sin rutina";
+                document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
+                show('client-screen');
+            }
+            // Limpiamos errores si todo sale bien
+            errorMsg.classList.add("hidden");
+            pwInput.style.borderColor = "";
+        }
+    } catch (error) {
+        // Si falla el usuario o la contraseña
+        errorMsg.classList.remove("hidden");
+        pwInput.style.borderColor = 'var(--red)';
+        console.error("Error:", error.code);
+    }
 };
 
 document.getElementById('pw-input').addEventListener('keydown', e => {
