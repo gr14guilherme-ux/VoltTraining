@@ -471,13 +471,14 @@ label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-wei
   <div class="pw-box">
     <div class="pw-logo">TRAINFLOW</div>
     <div class="pw-sub">Panel de entrenador</div>
-    <!-- Línea 474 -->
-<input type="email" id="email-input" placeholder="Correo electrónico" style="width:100%; margin-bottom:10px;">
-<input type="password" id="pw-input" placeholder="Contraseña" autocomplete="current-password">
 
-<div id="pw-error" class="pw-error hidden">Credenciales incorrectas</div>
+    <input type="email" id="email-input" placeholder="Correo electrónico" style="width:100%; margin-bottom:10px;">
 
-<button class="btn btn-accent" style="width:100%; margin-top:8px;" onclick="ejecutarLogin()">Entrar</button>
+    <input type="password" id="pw-input" placeholder="Contraseña" onkeyup="if(event.key==='Enter') ejecutarLogin()">
+
+    <div id="pw-error" class="pw-error hidden">Credenciales incorrectas</div>
+
+    <button class="btn btn-accent" style="width:100%; margin-top:8px;" onclick="ejecutarLogin()">Entrar</button>
 
   </div>
 </div>
@@ -551,6 +552,7 @@ const DAYS_SHORT = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 // ═══════════════════════════════════════════════
 let db, dataRef;
 let firestore;
+let auth;          // <--- AÑADE ESTA LÍNEA
 let appData    = { weeks: [] };
 let adminWeek  = 0;
 let adminDay   = 0;
@@ -577,7 +579,7 @@ if (!cfg.apiKey || cfg.apiKey === 'TU_API_KEY') {
   try {
     const app = initializeApp(cfg);
     db = getDatabase(app);
-       const auth = getAuth(app);
+        auth = getAuth(app);
 firestore = getFirestore(app);
     dataRef = ref(db, 'trainflow/data');
        window.ejecutarLogin = async function() {
@@ -687,43 +689,51 @@ function show(id) {
 }
 window.show = show;
 
-window.ejecutarLogin = async function() {
-    const email = document.getElementById("email-input").value;
-    const password = document.getElementById("pw-input").value;
-    const errorMsg = document.getElementById("pw-error");
-    const pwInput = document.getElementById("pw-input");
+// --- ESTO ES LO QUE DEBES REVISAR ---
+    window.ejecutarLogin = async function() {
+        const email = document.getElementById("email-input").value;
+        const password = document.getElementById("pw-input").value;
+        const errorMsg = document.getElementById("pw-error");
+        const pwInput = document.getElementById("pw-input");
 
-    try {
-        // 1. Intentar entrar con Firebase
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        try {
+            // Intento de entrar con Firebase Auth
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
 
-        // 2. Traer los datos del usuario desde Firestore
-        const docRef = doc(db, "usuarios", user.uid);
-        const docSnap = await getDoc(docRef);
+            // REVISIÓN CRÍTICA: Aquí consultamos el ROL en Firestore
+            const docRef = doc(firestore, "usuarios", user.uid);
+            const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-            const datos = docSnap.data();
+            if (docSnap.exists()) {
+                const datos = docSnap.data();
+                
+                // Si el campo 'rol' es 'admin', activamos el panel de control
+                isAdmin = (datos.rol === "admin");
 
-            if (datos.rol === "admin") {
-                show('admin-screen');
+                if (isAdmin) {
+                    show('admin-screen');
+                    renderAdminWeekList();
+                } else {
+                    // Si no es admin, lo mandamos a la vista de cliente
+                    document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
+                    show('client-screen');
+                    renderClientFull();
+                }
+                errorMsg.classList.add("hidden");
+                pwInput.style.borderColor = "";
             } else {
-                // Cargamos su rutina y nombre antes de mostrar la pantalla
-                document.getElementById("c-content").innerText = datos.rutina || "Sin rutina";
-                document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
-                show('client-screen');
+                // Si el usuario existe en Auth pero no en Firestore
+                alert("Usuario autenticado, pero no tiene perfil en la base de datos 'usuarios' de Firestore.");
             }
-            // Limpiamos errores si todo sale bien
-            errorMsg.classList.add("hidden");
-            pwInput.style.borderColor = "";
+        } catch (error) {
+            // Si el correo o la clave están mal
+            errorMsg.classList.remove("hidden");
+            errorMsg.innerText = "Correo o contraseña incorrectos";
+            pwInput.style.borderColor = 'var(--red)';
+            console.error("Error en el login:", error);
         }
-    } catch (error) {
-        // Si falla el usuario o la contraseña
-        errorMsg.classList.remove("hidden");
-        pwInput.style.borderColor = 'var(--red)';
-        console.error("Error:", error.code);
-    }
-};
+    };
 
 document.getElementById('pw-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') checkPw();
