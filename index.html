@@ -672,9 +672,9 @@ const user= getAuth().currentUser;
           if (docSnap.exist()) {
                const datos = docSnap.data();
                document.getElementById("c-content").innerText = datos.rutina;
-               document.querySelector("hero-title").innerHTML = `Hola,<br><em>${datos.nombre}</em>`;
-          }
-     }
+               document.querySelector("hero-title").innerHTML = "Hola,<br><em>" + datos.nombre + "</em>";
+         }
+    }
   clientWeek = getCurrentWeekIdx();
   clientDay  = getTodayDayIdx();
   renderClientFull();
