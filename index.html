@@ -670,13 +670,10 @@ const user= getAuth().currentUser;
      if (user) {
           const docRef = doc(getFirestore(), "usuarios", user.uid);
           const docSnap = await getDoc(docRef);
-
           if (docSnap.exist()) {
                const datos = docSnap.data();
-
-               document.getElementById('c-content').innerText = datos.rutina;
-
-               document.querySelector('hero-title').innerHTML = 'Hola,<br><em>${datos.nombre}</em>`;
+               document.getElementById("c-content").innerText = datos.rutina;
+               document.querySelector("hero-title").innerHTML = 'Hola,<br><em>${datos.nombre}</em>`;
           }
      }
   clientWeek = getCurrentWeekIdx();
