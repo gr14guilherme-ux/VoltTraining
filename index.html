@@ -599,17 +599,7 @@ firestore = getFirestore(app);
         if (docSnap.exists()) {
           const datos = docSnap.data();
           isAdmin = (datos.rol === "admin");
-// --- PASO 1 EXPLICADO: DEFINIR LA RUTA PERSONAL ---
-          // Si es admin, ve la carpeta global. 
-          // Si es cliente, va a 'usuarios/SU_ID_UNICO'
-          const rutaPersonal = isAdmin ? 'trainflow/data' : `usuarios/${user.uid}/rutina`;
-          dataRef = ref(db, rutaPersonal);
 
-          // Ahora activamos la escucha de los datos de esa ruta específica
-          onValue(dataRef, (snapshot) => {
-            const val = snapshot.val();
-            fullData = val || { weeks: [] };
-             
           if (isAdmin) {
             show('admin-screen');
             renderAdminWeekList();
@@ -700,67 +690,50 @@ function show(id) {
 window.show = show;
 
 // --- ESTO ES LO QUE DEBES REVISAR ---
-  window.ejecutarLogin = async function() {
+    window.ejecutarLogin = async function() {
         const email = document.getElementById("email-input").value;
         const password = document.getElementById("pw-input").value;
         const errorMsg = document.getElementById("pw-error");
         const pwInput = document.getElementById("pw-input");
 
-        if (!email || !password) {
-            alert("Por favor, rellena todos los campos");
-            return;
-        }
-
         try {
-            // 1. Autenticación: ¿Existe el usuario y la clave es correcta?
+            // Intento de entrar con Firebase Auth
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // 2. Perfil: ¿Es admin o cliente?
+            // REVISIÓN CRÍTICA: Aquí consultamos el ROL en Firestore
             const docRef = doc(firestore, "usuarios", user.uid);
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists()) {
                 const datos = docSnap.data();
+                
+                // Si el campo 'rol' es 'admin', activamos el panel de control
                 isAdmin = (datos.rol === "admin");
 
-                // 3. Ruta Dinámica: Aquí es donde se separan las rutinas
-                // Si es admin va a 'trainflow/data', si es cliente va a su carpeta UID
-                const ruta = isAdmin ? 'trainflow/data' : `usuarios/${user.uid}/rutina`;
-                dataRef = ref(db, ruta);
-
-                // 4. Escucha de datos: Traemos la rutina de esa ruta específica
-                onValue(dataRef, (snapshot) => {
-                    const val = snapshot.val();
-                    fullData = val || { weeks: [] };
-                    appData = fullData; // Sincronizamos con la variable global
-
-                    // Cambiamos la ruta a formato tradicional para evitar fallos de comillas
-          var ruta = "";
-          if (isAdmin) {
-              ruta = 'trainflow/data';
-          } else {
-              ruta = 'usuarios/' + user.uid + '/rutina';
-          }
-          
-          dataRef = ref(db, ruta);
-
-          onValue(dataRef, function(snapshot) {
-              var val = snapshot.val();
-              fullData = val || { weeks: [] };
-              appData = fullData;
-
-              if (isAdmin) {
-                  show('admin-screen');
-                  renderAdminWeekList();
-              } else {
-                  // He simplificado esta línea para que no use paréntesis complejos
-                  var nombreCliente = datos.nombre || "Cliente";
-                  document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + nombreCliente + "</em>";
-                  show('client-screen');
-                  renderClientFull();
-              }
-          }); // <--- ESTE PUNTO Y COMA ES VITAL
+                if (isAdmin) {
+                    show('admin-screen');
+                    renderAdminWeekList();
+                } else {
+                    // Si no es admin, lo mandamos a la vista de cliente
+                    document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
+                    show('client-screen');
+                    renderClientFull();
+                }
+                errorMsg.classList.add("hidden");
+                pwInput.style.borderColor = "";
+            } else {
+                // Si el usuario existe en Auth pero no en Firestore
+                alert("Usuario autenticado, pero no tiene perfil en la base de datos 'usuarios' de Firestore.");
+            }
+        } catch (error) {
+            // Si el correo o la clave están mal
+            errorMsg.classList.remove("hidden");
+            errorMsg.innerText = "Correo o contraseña incorrectos";
+            pwInput.style.borderColor = 'var(--red)';
+            console.error("Error en el login:", error);
+        }
+    };
 
 document.getElementById('pw-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') checkPw();
