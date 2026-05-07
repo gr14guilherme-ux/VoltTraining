@@ -717,13 +717,14 @@ window.show = show;
                 isAdmin = (datos.rol === "admin");
 
                 if (isAdmin) {
-                    show('admin-screen');
-                    renderAdminWeekList();
-                } else {
-                    document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
-                    show('client-screen');
-                    renderClientFull();
-                }
+          show('admin-screen');
+          renderAdminWeekList();
+      } else {
+          // REVISA ESTA LÍNEA: Debe tener el + antes del paréntesis de (datos.nombre)
+          document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
+          show('client-screen');
+          renderClientFull();
+      }
                 errorMsg.classList.add("hidden");
                 pwInput.style.borderColor = "";
             } else {
