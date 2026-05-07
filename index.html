@@ -700,15 +700,23 @@ function show(id) {
 window.show = show;
 
 // --- ESTO ES LO QUE DEBES REVISAR ---
-   window.ejecutarLogin = async function() {
+  window.ejecutarLogin = async function() {
         const email = document.getElementById("email-input").value;
         const password = document.getElementById("pw-input").value;
         const errorMsg = document.getElementById("pw-error");
         const pwInput = document.getElementById("pw-input");
 
+        if (!email || !password) {
+            alert("Por favor, rellena todos los campos");
+            return;
+        }
+
         try {
+            // 1. Autenticación: ¿Existe el usuario y la clave es correcta?
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
+
+            // 2. Perfil: ¿Es admin o cliente?
             const docRef = doc(firestore, "usuarios", user.uid);
             const docSnap = await getDoc(docRef);
 
@@ -716,25 +724,38 @@ window.show = show;
                 const datos = docSnap.data();
                 isAdmin = (datos.rol === "admin");
 
-                if (isAdmin) {
-          show('admin-screen');
-          renderAdminWeekList();
-      } else {
-          // REVISA ESTA LÍNEA: Debe tener el + antes del paréntesis de (datos.nombre)
-          document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
-          show('client-screen');
-          renderClientFull();
-      }
+                // 3. Ruta Dinámica: Aquí es donde se separan las rutinas
+                // Si es admin va a 'trainflow/data', si es cliente va a su carpeta UID
+                const ruta = isAdmin ? 'trainflow/data' : `usuarios/${user.uid}/rutina`;
+                dataRef = ref(db, ruta);
+
+                // 4. Escucha de datos: Traemos la rutina de esa ruta específica
+                onValue(dataRef, (snapshot) => {
+                    const val = snapshot.val();
+                    fullData = val || { weeks: [] };
+                    appData = fullData; // Sincronizamos con la variable global
+
+                    if (isAdmin) {
+                        show('admin-screen');
+                        renderAdminWeekList();
+                    } else {
+                        // Saludo personalizado
+                        document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
+                        show('client-screen');
+                        renderClientFull();
+                    }
+                });
+
                 errorMsg.classList.add("hidden");
                 pwInput.style.borderColor = "";
             } else {
-                alert("Usuario sin perfil en Firestore.");
+                alert("Error: No tienes un perfil creado en Firestore.");
             }
         } catch (error) {
+            console.error("Error detallado:", error);
             errorMsg.classList.remove("hidden");
-            errorMsg.innerText = "Error: " + error.message;
+            errorMsg.innerText = "Correo o contraseña incorrectos";
             pwInput.style.borderColor = 'var(--red)';
-            console.error(error);
         }
     }; // <--- ESTE PUNTO Y COMA ES VITAL
 
