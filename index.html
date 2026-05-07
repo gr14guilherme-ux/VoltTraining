@@ -735,29 +735,32 @@ window.show = show;
                     fullData = val || { weeks: [] };
                     appData = fullData; // Sincronizamos con la variable global
 
-                    if (isAdmin) {
-                        show('admin-screen');
-                        renderAdminWeekList();
-                    } else {
-                        // Saludo personalizado
-                        document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
-                        show('client-screen');
-                        renderClientFull();
-                    }
-                });
+                    // Cambiamos la ruta a formato tradicional para evitar fallos de comillas
+          var ruta = "";
+          if (isAdmin) {
+              ruta = 'trainflow/data';
+          } else {
+              ruta = 'usuarios/' + user.uid + '/rutina';
+          }
+          
+          dataRef = ref(db, ruta);
 
-                errorMsg.classList.add("hidden");
-                pwInput.style.borderColor = "";
-            } else {
-                alert("Error: No tienes un perfil creado en Firestore.");
-            }
-        } catch (error) {
-            console.error("Error detallado:", error);
-            errorMsg.classList.remove("hidden");
-            errorMsg.innerText = "Correo o contraseña incorrectos";
-            pwInput.style.borderColor = 'var(--red)';
-        }
-    }; // <--- ESTE PUNTO Y COMA ES VITAL
+          onValue(dataRef, function(snapshot) {
+              var val = snapshot.val();
+              fullData = val || { weeks: [] };
+              appData = fullData;
+
+              if (isAdmin) {
+                  show('admin-screen');
+                  renderAdminWeekList();
+              } else {
+                  // He simplificado esta línea para que no use paréntesis complejos
+                  var nombreCliente = datos.nombre || "Cliente";
+                  document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + nombreCliente + "</em>";
+                  show('client-screen');
+                  renderClientFull();
+              }
+          }); // <--- ESTE PUNTO Y COMA ES VITAL
 
 document.getElementById('pw-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') checkPw();
