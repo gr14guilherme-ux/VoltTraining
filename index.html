@@ -599,7 +599,17 @@ firestore = getFirestore(app);
         if (docSnap.exists()) {
           const datos = docSnap.data();
           isAdmin = (datos.rol === "admin");
+// --- PASO 1 EXPLICADO: DEFINIR LA RUTA PERSONAL ---
+          // Si es admin, ve la carpeta global. 
+          // Si es cliente, va a 'usuarios/SU_ID_UNICO'
+          const rutaPersonal = isAdmin ? 'trainflow/data' : `usuarios/${user.uid}/rutina`;
+          dataRef = ref(db, rutaPersonal);
 
+          // Ahora activamos la escucha de los datos de esa ruta específica
+          onValue(dataRef, (snapshot) => {
+            const val = snapshot.val();
+            fullData = val || { weeks: [] };
+             
           if (isAdmin) {
             show('admin-screen');
             renderAdminWeekList();
