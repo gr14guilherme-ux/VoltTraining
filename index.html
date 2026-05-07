@@ -700,32 +700,26 @@ function show(id) {
 window.show = show;
 
 // --- ESTO ES LO QUE DEBES REVISAR ---
-    window.ejecutarLogin = async function() {
+   window.ejecutarLogin = async function() {
         const email = document.getElementById("email-input").value;
         const password = document.getElementById("pw-input").value;
         const errorMsg = document.getElementById("pw-error");
         const pwInput = document.getElementById("pw-input");
 
         try {
-            // Intento de entrar con Firebase Auth
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-
-            // REVISIÓN CRÍTICA: Aquí consultamos el ROL en Firestore
             const docRef = doc(firestore, "usuarios", user.uid);
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists()) {
                 const datos = docSnap.data();
-                
-                // Si el campo 'rol' es 'admin', activamos el panel de control
                 isAdmin = (datos.rol === "admin");
 
                 if (isAdmin) {
                     show('admin-screen');
                     renderAdminWeekList();
                 } else {
-                    // Si no es admin, lo mandamos a la vista de cliente
                     document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
                     show('client-screen');
                     renderClientFull();
@@ -733,17 +727,15 @@ window.show = show;
                 errorMsg.classList.add("hidden");
                 pwInput.style.borderColor = "";
             } else {
-                // Si el usuario existe en Auth pero no en Firestore
-                alert("Usuario autenticado, pero no tiene perfil en la base de datos 'usuarios' de Firestore.");
+                alert("Usuario sin perfil en Firestore.");
             }
         } catch (error) {
-            // Si el correo o la clave están mal
             errorMsg.classList.remove("hidden");
-            errorMsg.innerText = "Correo o contraseña incorrectos";
+            errorMsg.innerText = "Error: " + error.message;
             pwInput.style.borderColor = 'var(--red)';
-            console.error("Error en el login:", error);
+            console.error(error);
         }
-    };
+    }; // <--- ESTE PUNTO Y COMA ES VITAL
 
 document.getElementById('pw-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') checkPw();
