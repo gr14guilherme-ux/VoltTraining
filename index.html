@@ -588,43 +588,30 @@ firestore = getFirestore(app);
       const errorMsg = document.getElementById("pw-error");
       const pwInput = document.getElementById("pw-input");
 
-     try {
+      try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        
-        console.log("Login exitoso, UID:", user.uid);
 
-        // 1. SI ERES TÚ (EL ADMIN)
-        if (user.uid === "3H8MyLMOUuVbV88FYjnCcICARjP2") {
-            isAdmin = true;
-            show("admin-screen");
+        // Consultar el rol en Firestore
+        const docRef = doc(firestore, "usuarios", user.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const datos = docSnap.data();
+          isAdmin = (datos.rol === "admin");
+
+          if (isAdmin) {
+            show('admin-screen');
             renderAdminWeekList();
-        } 
-        // 2. SI ES UN CLIENTE (Recuperamos sus datos para que no dé error)
-        else {
-            isAdmin = false;
-            const docRef = doc(firestore, "usuarios", user.uid);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                const datos = docSnap.data();
-                document.querySelector(".hero-title").innerHTML = Hola, ${datos.nombre || "Cliente"} 👋;
-                show("client-screen");
-                renderClientFull(); // Esta función ahora tendrá los datos que necesita
-            } else {
-                console.log("El cliente no tiene datos en Firestore");
-                show("client-screen");
-            }
+          } else {
+            document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
+            show('client-screen');
+            renderClientFull();
+          }
+          errorMsg.classList.add("hidden");
+        } else {
+          alert("Usuario sin datos de perfil en Firestore.");
         }
-
-        errorMsg.classList.add("hidden");
-
-    } catch (error) {
-        console.error("Error en login:", error);
-        errorMsg.innerText = "Email o contraseña incorrectos";
-        errorMsg.classList.remove("hidden");
-    }
-
       } catch (error) {
         errorMsg.classList.remove("hidden");
         errorMsg.innerText = "Correo o contraseña incorrectos";
