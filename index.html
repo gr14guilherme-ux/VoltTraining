@@ -591,27 +591,30 @@ firestore = getFirestore(app);
       try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+        
+        console.log("Login exitoso, UID:", user.uid);
 
-        // Consultar el rol en Firestore
-        const docRef = doc(firestore, "usuarios", user.uid);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const datos = docSnap.data();
-          isAdmin = (datos.rol === "admin");
-
-          if (isAdmin) {
-            show('admin-screen');
+        // COMPROBACIÓN DIRECTA DE ADMIN
+        if (user.uid === "3H8MyLMOUuVbV88FYjnCcICARjP2") {
+            isAdmin = true;
+            show("admin-screen");
             renderAdminWeekList();
-          } else {
-            document.querySelector(".hero-title").innerHTML = "Hola,<br><em>" + (datos.nombre || "Cliente") + "</em>";
-            show('client-screen');
-            renderClientFull();
-          }
-          errorMsg.classList.add("hidden");
-        } else {
-          alert("Usuario sin datos de perfil en Firestore.");
+        } 
+        // SI NO ES TU UID, ES UN CLIENTE
+        else {
+            isAdmin = false;
+            // Aquí podrías poner un mensaje de bienvenida personalizado si quieres
+            show("client-screen");
+            renderClientFull(); // He visto que tienes esta función en la línea 609
         }
+
+        errorMsg.classList.add("hidden"); // Oculta el error si todo salió bien
+
+    } catch (error) {
+        console.error("Error en login:", error);
+        errorMsg.innerText = "Email o contraseña incorrectos";
+        errorMsg.classList.remove("hidden");
+    }
       } catch (error) {
         errorMsg.classList.remove("hidden");
         errorMsg.innerText = "Correo o contraseña incorrectos";
