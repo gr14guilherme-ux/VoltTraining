@@ -1,40 +1,290 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrainFlow</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aventura D&D: El Despertar del Dragón</title>
+    <style>
+        :root {
+            --bg-color: #111;
+            --text-color: #e0d6c8;
+            --accent-color: #8b0000;
+            --panel-bg: #222;
+            --border-color: #d4af37;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Georgia', serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--panel-bg);
+            border: 4px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #media-container {
+            width: 100%;
+            height: 300px;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            overflow: hidden;
+        }
+        #media-container img, #media-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #stats-bar {
+            background-color: #0a0a0a;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            color: var(--border-color);
+            border-bottom: 2px solid var(--border-color);
+        }
+        #story-container {
+            padding: 30px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            min-height: 150px;
+        }
+        #dice-result {
+            color: var(--border-color);
+            font-style: italic;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        #choices-container {
+            display: flex;
+            flex-direction: column;
+            padding: 0 30px 30px 30px;
+            gap: 10px;
+        }
+        button {
+            background-color: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            font-family: 'Georgia', serif;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+        button:hover {
+            background-color: var(--accent-color);
+            color: #fff;
+        }
+        button:disabled {
+            border-color: #555;
+            color: #555;
+            cursor: not-allowed;
+            background-color: transparent;
+        }
+    </style>
+</head>
+<body>
 
-<!-- ══════════════════════════════════════════════
-     🔧 CONFIGURACIÓN FIREBASE
-     Reemplaza estos valores con los tuyos
-     (ver guía al final del archivo)
-══════════════════════════════════════════════ -->
-<script>
-  const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyCO3wud1aTsWK2lJQkJqhKuxnc6D7K4R88",
-  authDomain: "gr14-trainer.firebaseapp.com",
-databaseURL: "https://gr14-trainer-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "gr14-trainer",
-  storageBucket: "gr14-trainer.firebasestorage.app",
-  messagingSenderId: "429050753991",
-  appId: "1:429050753991:web:cb8672113946acec75dfe2",
-  measurementId: "G-QRL9FX8CST",
-  };
-  const ADMIN_PASSWORD = "Gr14gu1lh3rm3";
-</script>
+    <div id="game-container">
+        <!-- Contenedor multimedia (Imágenes y Videos) -->
+        <div id="media-container">
+            <!-- Aquí se inyectará el contenido visual -->
+        </div>
 
-<style>
-:root {
-  --bg:      #08080f;
-  --s1:      #0f0f18;
-  --s2:      #161622;
-  --s3:      #1e1e2e;
-  --border:  #2a2a3d;
-  --border2: #363650;
-  --accent:  #00e5a0;
-  --accent-dim: rgba(0,229,160,.12);
+        <!-- Barra de Estadísticas -->
+        <div id="stats-bar">
+            <span>Clase: <span id="player-class">Ninguna</span></span>
+            <span>HP: <span id="player-hp">20</span>/20</span>
+            <span>Oro: <span id="player-gold">0</span></span>
+        </div>
+
+        <!-- Narrativa -->
+        <div id="story-container">
+            <div id="story-text">Cargando la aventura...</div>
+            <div id="dice-result"></div>
+        </div>
+
+        <!-- Opciones del jugador -->
+        <div id="choices-container">
+            <!-- Los botones se generarán con JavaScript -->
+        </div>
+    </div>
+
+    <!-- Reproductor oculto para las voces narrativas -->
+    <audio id="voice-player"></audio>
+
+    <script>
+        // --- ESTADO DEL JUGADOR ---
+        let player = {
+            hp: 20,
+            maxHp: 20,
+            gold: 15,
+            charClass: '',
+            attackBonus: 0
+        };
+
+        // --- SISTEMA DE DADOS ---
+        function rollD20() {
+            return Math.floor(Math.random() * 20) + 1;
+        }
+
+        // --- ACTUALIZACIÓN DE INTERFAZ ---
+        function updateUI() {
+            document.getElementById('player-hp').innerText = player.hp;
+            document.getElementById('player-class').innerText = player.charClass || 'Desconocido';
+            document.getElementById('player-gold').innerText = player.gold;
+        }
+
+        // --- BASE DE DATOS DE LA HISTORIA ---
+        // Aquí puedes agregar todas las rutas de tus videos locales, imágenes y audios.
+        const storyNodes = {
+            start: {
+                text: "La taberna 'El Poni Pisador' huele a cerveza rancia y madera quemada. Un anciano encapuchado te observa desde una mesa oscura. Te acercas y él pone un mapa en la mesa. 'La tumba de Aldur ha sido descubierta', susurra con voz rasposa. '¿Qué clase de aventurero eres?'",
+                media: "<img src='https://images.unsplash.com/photo-1519074069444-1ba4fff66d16?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' alt='Taberna oscura'>", 
+                voice: "", // Aquí iría "audio/intro_taberna.mp3"
+                choices: [
+                    { text: "Soy un Guerrero (Fuerza bruta, +5 a tiradas de ataque)", action: () => { player.charClass = 'Guerrero'; player.attackBonus = 5; goToNode('camino_bosque'); } },
+                    { text: "Soy un Pícaro (Sigilo y astucia, evitar combates)", action: () => { player.charClass = 'Pícaro'; player.attackBonus = 2; goToNode('camino_bosque'); } }
+                ]
+            },
+            camino_bosque: {
+                text: "Sales del pueblo hacia el Bosque de las Sombras. El viento aúlla entre los árboles. De repente, escuchas el crujir de unas ramas. ¡Una banda de Goblins te bloquea el paso!",
+                media: "<img src='https://images.unsplash.com/photo-1448375240586-882707db888b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' alt='Bosque oscuro'>",
+                choices: [
+                    { text: "¡Desenvainar y atacar! (Requiere tirada de combate)", action: () => combatRoutine('goblin') },
+                    { text: "Intentar escabullirse por las sombras (Solo Pícaro)", action: () => {
+                        if(player.charClass === 'Pícaro') {
+                            showDiceResult("Te escabulles sin ser visto. ¡Ventaja de clase!");
+                            goToNode('entrada_tumba');
+                        } else {
+                            showDiceResult("Tu pesada armadura hace ruido. ¡Los Goblins te descubren!");
+                            combatRoutine('goblin');
+                        }
+                    }}
+                ]
+            },
+            combate_victoria: {
+                text: "¡El último goblin cae al suelo! Al registrar sus cuerpos encuentras 10 monedas de oro. Jadeando, continúas tu camino.",
+                media: "<video autoplay loop muted><source src='https://www.w3schools.com/html/mov_bbb.mp4' type='video/mp4'></video>", // Ejemplo de un video corto como cinemática
+                action: () => { player.gold += 10; updateUI(); },
+                choices: [
+                    { text: "Avanzar hacia la Tumba", action: () => goToNode('entrada_tumba') }
+                ]
+            },
+            combate_derrota: {
+                text: "El golpe del goblin es certero. Caes al suelo de rodillas mientras tu visión se desvanece. La aventura ha terminado.",
+                media: "<div style='color:red; font-size:3em; font-weight:bold;'>FIN DEL JUEGO</div>",
+                choices: [
+                    { text: "Volver a jugar", action: () => location.reload() }
+                ]
+            },
+            entrada_tumba: {
+                text: "Llegas a la Tumba de Aldur. Dos estatuas de piedra custodian unas pesadas puertas de bronce. Aquí termina esta demo interactiva, ¡pero el código está listo para que escribas tu propia campaña épica!",
+                media: "<img src='https://images.unsplash.com/photo-1605806616949-1e87b487cb2a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' alt='Puertas de la tumba'>",
+                choices: [
+                    { text: "Reiniciar Aventura", action: () => location.reload() }
+                ]
+            }
+        };
+
+        // --- LÓGICA DE NAVEGACIÓN ---
+        function goToNode(nodeId) {
+            const node = storyNodes[nodeId];
+            
+            // Limpiar resultados anteriores
+            document.getElementById('dice-result').innerText = '';
+
+            // Mostrar Texto
+            document.getElementById('story-text').innerText = node.text;
+
+            // Mostrar Multimedia (Imágenes o Videos)
+            if(node.media) {
+                document.getElementById('media-container').innerHTML = node.media;
+            }
+
+            // Reproducir Voz (si existe ruta)
+            const voicePlayer = document.getElementById('voice-player');
+            if(node.voice) {
+                voicePlayer.src = node.voice;
+                voicePlayer.play().catch(e => console.log("Interacción de audio requerida por el navegador."));
+            }
+
+            // Ejecutar acciones pasivas del nodo (como ganar oro o daño pasivo)
+            if(node.action) {
+                node.action();
+            }
+
+            // Generar Botones
+            const choicesContainer = document.getElementById('choices-container');
+            choicesContainer.innerHTML = ''; // Limpiar botones viejos
+
+            node.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.innerText = choice.text;
+                btn.onclick = () => choice.action();
+                choicesContainer.appendChild(btn);
+            });
+
+            updateUI();
+        }
+
+        // --- SISTEMA DE COMBATE SIMPLE ---
+        function combatRoutine(enemyType) {
+            const diceRoll = rollD20();
+            const totalScore = diceRoll + player.attackBonus;
+            const enemyAC = 12; // Clase de Armadura del enemigo
+
+            let msg = `Tiras un D20... Sale un ${diceRoll}. Total con tu bono (+${player.attackBonus}) = ${totalScore}. `;
+
+            if (totalScore >= enemyAC) {
+                showDiceResult(msg + "¡Impacto crítico! Derrotas al enemigo.");
+                setTimeout(() => goToNode('combate_victoria'), 3000);
+            } else {
+                let dmg = 5;
+                player.hp -= dmg;
+                updateUI();
+                if(player.hp <= 0) {
+                    showDiceResult(msg + `¡Fallas! Recibes ${dmg} de daño y caes derrotado.`);
+                    setTimeout(() => goToNode('combate_derrota'), 3000);
+                } else {
+                    showDiceResult(msg + `¡Fallas! Recibes ${dmg} de daño. ¡Pero logras escapar a duras penas!`);
+                    setTimeout(() => goToNode('entrada_tumba'), 4000);
+                }
+            }
+            
+            // Deshabilitar botones durante la tirada
+            const buttons = document.querySelectorAll('#choices-container button');
+            buttons.forEach(b => b.disabled = true);
+        }
+
+        function showDiceResult(text) {
+            document.getElementById('dice-result').innerText = text;
+        }
+
+        // --- INICIAR EL JUEGO ---
+        window.onload = () => {
+            updateUI();
+            goToNode('start');
+        };
+    </script>
+</body>
+</html>  --accent-dim: rgba(0,229,160,.12);
   --red:     #ff4d6d;
   --blue:    #5b8def;
   --text:    #eeeef5;
